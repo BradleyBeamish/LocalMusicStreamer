@@ -1,0 +1,140 @@
+@{
+    ViewData["Title"] = "Library";
+}
+
+<h1>Library</h1>
+
+@if (Directory.Exists(System.IO.Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads")))
+{
+    var uploadPath = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+    
+    var files = Directory.GetFiles(uploadPath)
+        .Where(f => f.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".flac", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(f => System.IO.Path.GetFileName(f))
+        .ToList();
+    
+    <ul class="list-group">
+        @foreach (var file in files)
+        {
+            var fileName = System.IO.Path.GetFileName(file);
+            var fileUrl = Url.Content($"~/uploads/{fileName}");
+
+            // Get metadata with TagLib#
+            var tagFile = TagLib.File.Create(file);
+            var title = tagFile.Tag.Title ?? "Unknown Title";
+            var artist = tagFile.Tag.Performers.FirstOrDefault() ?? "Unknown Artist";
+            var duration = tagFile.Properties.Duration;
+            var bitrate = tagFile.Properties.AudioBitrate;
+
+            <li class="list-group-item" data-file="@fileUrl">
+                <strong>@fileName</strong><br />
+                <strong> Title: </strong> @title <br />
+                <strong> Artist: </strong> @artist <br />
+                <strong> Duration: </strong> @duration <br />
+                <strong> Bitrate: </strong> @bitrate kbps <br />
+                <a href="@fileUrl" onclick="playAudio('@fileUrl'); return false;"> Play</a> <br />
+                <a href="@fileUrl" onclick="removeAudio('@fileUrl'); return false;"> Remove</a> <br />
+                <button onclick="showPlaylists('@fileName')"> Add to Playlist</button>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>The upload directory does not exist. (/wwwroot/uploads)</p>
+}
+
+<div id="playlistModal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; rgba(0, 0, 0, 0.1); z-index: 1000;">
+    <h3>Select a Playlist</h3>
+    <ul id="modalPlaylistList"></ul>
+    <button onclick="closeModal()">Close</button>
+</div>
+
+<div id="overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999;" onclick="closeModal()"></div>
+
+<script>
+    /*
+     * Loads audio player in footer with the selected song
+     */
+    function playAudio(fileUrl) {
+        const audioPlayer = document.querySelector('footer audio');
+        const sources = audioPlayer.querySelectorAll('source');
+
+        sources[0].src = fileUrl.endsWith('.flac') ? fileUrl : '';
+        sources[1].src = fileUrl.endsWith('.mp3') ? fileUrl : '';
+
+        audioPlayer.load();
+        if (fileUrl.endsWith('.flac') || fileUrl.endsWith('.mp3')) {
+            audioPlayer.play();
+        } else {
+            console.warn("Unsupported audio format");
+        }
+    }
+    
+    /*
+     * Sends a request to the controller to delete a file from the local file system
+     */
+    function removeAudio(fileUrl) {
+        if (!confirm("Are you sure you want to delete this file?")) return;
+
+        const listItem = document.querySelector(`[data-file="${fileUrl}"]`);
+        fetch('/Library/DeleteFile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fileUrl)
+        })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || "File deleted successfully");
+                
+                if (response.ok) {
+                    listItem.remove();
+                } 
+            })
+            .catch(error => alert("Error deleting file: " + error));
+    }
+
+    /*
+     * Shows all playlists from the DB in the Modal
+     */
+    function showPlaylists(songName) {
+        fetch('/Playlist')
+            .then(response => response.json())
+            .then(data => {
+                const modalPlaylistList = document.getElementById('modalPlaylistList');
+                modalPlaylistList.innerHTML = '';
+                data.forEach(playlist => {
+                    const li = document.createElement('li');
+                    const button = document.createElement('button');
+                    button.textContent = playlist.name;
+                    button.onclick = () => addToPlaylist(playlist.id, songName);
+                    li.appendChild(button);
+                    modalPlaylistList.appendChild(li);
+                });
+
+                document.getElementById('playlistModal').style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+            });
+    }
+
+    /*
+     * Sends a request to the controller to create a relationship between a song and a playlist
+     */
+    function addToPlaylist(playlistId, songName) {
+        fetch(`/Playlist/${playlistId}/AddSong`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(songName),
+        }).then(() => {
+            closeModal();
+        });
+    }
+    
+    /*
+     * Closes "Add to Playlist" Modal
+     */
+    function closeModal() {
+        document.getElementById('playlistModal').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+    }
+</script>

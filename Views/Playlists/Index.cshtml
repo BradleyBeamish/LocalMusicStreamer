@@ -1,0 +1,69 @@
+@model IEnumerable<LocalMusicStreamer.Models.PlaylistModel>
+
+@{
+    ViewData["Title"] = "Playlists";
+}
+
+<h1>Create a Playlist:</h1>
+
+<form asp-action="Create">
+    <div>
+        <label>Name</label>
+        <input type="text" name="name" required />
+    </div>
+    <button type="submit">Create</button>
+</form>
+
+<h1>All Playlists:</h1>
+
+<table>
+    <thead>
+    <tr>
+        <th>Playlist Name</th>
+        <th>Songs</th>
+    </tr>
+    </thead>
+    <tbody>
+        @foreach (var playlist in Model)
+        {
+            <tr>
+                <td>@playlist.Name</td>
+                <td>
+                    <ul>
+                        @foreach (var playlistSong in playlist.PlaylistSongs)
+                        {
+                            <li>
+                                <a href="@Url.Content($"{playlistSong.Song.FilePath}")" target="_blank">
+                                    @playlistSong.Song.Name
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                    <button onclick="deletePlaylist(@playlist.Id)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    /*
+     * Sends a request to the controller to delete a playlist
+     */
+    function deletePlaylist(playlistId) {
+        fetch(`/Playlists/Delete/${playlistId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || "Playlist deleted successfully");
+
+                if (data.success) {
+                    const row = document.getElementById(`playlist-row-${playlistId}`);
+                    row.remove();
+                }
+            })
+            .catch(error => alert("Error deleting playlist: " + error));
+    }
+</script>
