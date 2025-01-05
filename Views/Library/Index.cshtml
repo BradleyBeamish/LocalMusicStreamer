@@ -18,11 +18,15 @@
         {
             var fileName = System.IO.Path.GetFileName(file);
             var fileUrl = Url.Content($"~/uploads/{fileName}");
+            
+            // Get file Size
+            var fileInfo = new FileInfo(file);
+            var fileSizeInMb = Math.Round(fileInfo.Length / (1024.0 * 1024.0), 1);
 
             // Get metadata with TagLib#
             var tagFile = TagLib.File.Create(file);
             var artist = tagFile.Tag.Performers.FirstOrDefault() ?? "Unknown Artist";
-            var duration = tagFile.Properties.Duration;
+            var duration = tagFile.Properties.Duration.ToString(@"hh\:mm\:ss");
             var bitrate = tagFile.Properties.AudioBitrate;
 
             <li class="bg-gray-800 bg-opacity-30 m-2 p-2 text-white" data-file="@fileUrl">
@@ -30,9 +34,10 @@
                 <strong> Artist: </strong> @artist <br />
                 <strong> Duration: </strong> @duration <br />
                 <strong> Bitrate: </strong> @bitrate kbps <br />
-                <div class="flex space-x-2">
+                <strong> File Size: </strong> @fileSizeInMb MB <br />
+                <div class="flex space-x-2 mt-1">
                     <a class="bg-gray-600 p-2 hover:bg-gray-400 font-bold flex items-center justify-center h-10" href="@fileUrl" onclick="playAudio('@fileUrl'); return false;">Play</a>
-                    <a class="bg-gray-600 p-2 hover:bg-gray-400 flex front-bold items-center justify-center h-10" href="@fileUrl" onclick="removeAudio('@fileUrl'); return false;">Remove</a>
+                    <a class="bg-gray-600 p-2 hover:bg-gray-400 flex font-bold items-center justify-center h-10" href="@fileUrl" onclick="removeAudio('@fileUrl'); return false;">Remove</a>
                     <button class="bg-gray-600 p-2 hover:bg-gray-400 flex font-bold items-center justify-center h-10" onclick="showPlaylists('@fileName')">Add to Playlist</button>
                 </div>
             </li>

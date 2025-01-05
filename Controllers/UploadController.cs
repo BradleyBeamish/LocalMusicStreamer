@@ -33,8 +33,6 @@ public class UploadController : Controller
         {
             // Store Locally
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads", file.FileName);
-            
-            // Store in DB
             using var stream = new FileStream(filePath, FileMode.Create);
             file.CopyTo(stream);
 

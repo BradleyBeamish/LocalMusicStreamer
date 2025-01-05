@@ -1,8 +1,101 @@
-﻿@{
+﻿@model IEnumerable<LocalMusicStreamer.Models.PlaylistModel>
+
+@{
     ViewData["Title"] = "Home Page";
 }
 
 <div class="text-center">
-    <h1 class="text-4xl text-white font-bold text-center p-2">Local Music Streamer</h1>
-    <p class="text-white">Will eventually show recently played, in a grid-like format</p>
+    <h1 class="text-4xl text-white font-bold text-center p-2">Home</h1>
 </div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-4">
+    @foreach (var playlist in Model)
+    {
+        <div class="bg-gray-800 bg-opacity-30 rounded-lg shadow-lg p-4 text-center">
+            <div class="rounded-full bg-gray-700 w-24 h-24 mx-auto flex items-center justify-center">
+                <span class="text-white text-lg font-bold">
+                    @playlist.PlaylistSongs.Count
+                </span>
+            </div>
+            <h3 class="mt-4 text-white text-lg font-semibold">@playlist.Name</h3>
+            <button class="mt-2 bg-green-600 hover:bg-green-400 text-white font-bold py-1 px-4 rounded focus:outline-none focus:ring-2"
+                    onclick="playPlaylist('@playlist.Id')">
+                Play
+            </button>
+        </div>
+    }
+</div>
+
+<script>
+    let currentSongIndex = 0;
+    let songs = [];
+
+    /*
+     * Play button pressed, queues up playlist songs and starts first one
+     */
+    function playPlaylist(playlistId) {
+
+        // Grab all songs from a playlist
+        fetch(`/Playlists/${playlistId}/Songs`)
+            
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to load playlist songs.");
+                }
+                return response.json();
+            })
+            
+            .then(fetchedSongs => {
+                songs = fetchedSongs;
+                currentSongIndex = 0;
+                
+                document.getElementById('audioPlayer').onended = playNextSong;
+                playNextSong();
+            })
+            
+            .catch(error => {
+                alert("Playlist error.");
+            });
+    }
+
+    /*
+     * Plays next song in the queue
+     * Called when current song ends 
+     */
+    function playNextSong() {
+        if (currentSongIndex < songs.length) {
+            const song = songs[currentSongIndex];
+            const audioPlayer = document.getElementById('audioPlayer');
+
+            audioPlayer.src = song.filePath;
+            audioPlayer.play();
+            currentSongIndex++;
+        } else {
+            alert("Playlist ended.");
+        }
+    }
+    
+    /*
+     * Skip forward button pressed, play next song in playlist
+     */
+    function skipForward() {
+        currentSongIndex++;
+        const nextSong = songs[currentSongIndex];
+        
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = nextSong.filePath;
+        audioPlayer.play();
+    }
+
+    /*
+     * Skip backward button pressed, play previous song in playlist
+     */
+    function skipBackward() {
+        currentSongIndex--;
+        const previousSong = songs[currentSongIndex];
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = previousSong.filePath;
+        audioPlayer.play();
+    }
+</script>
