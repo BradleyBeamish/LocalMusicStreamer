@@ -39,6 +39,7 @@
                     <a class="bg-gray-600 p-2 hover:bg-gray-400 font-bold flex items-center justify-center h-10" href="@fileUrl" onclick="playAudio('@fileUrl'); return false;">Play</a>
                     <a class="bg-gray-600 p-2 hover:bg-gray-400 flex font-bold items-center justify-center h-10" href="@fileUrl" onclick="removeAudio('@fileUrl'); return false;">Remove</a>
                     <button class="bg-gray-600 p-2 hover:bg-gray-400 flex font-bold items-center justify-center h-10" onclick="showPlaylists('@fileName')">Add to Playlist</button>
+                    <button class="bg-gray-600 p-2 hover:bg-gray-400 flex font-bold items-center justify-center h-10" onclick="compressFile('@fileName')">Compress</button>
                 </div>
             </li>
         }
@@ -49,13 +50,37 @@ else
     <p>The upload directory does not exist. (/wwwroot/uploads)</p>
 }
 
-<div class="rounded-2xl bg-gray-200 p-2" id="playlistModal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; rgba(0, 0, 0, 0.1); z-index: 1000;">
-    <h3 class="underline font-bold my-2">Select a Playlist:</h3>
-    <ul id="modalPlaylistList"></ul>
-    <button class="bg-gray-600 p-2 hover:bg-gray-400 h-10 m-1 rounded" onclick="closeModal()">[X]</button>
+<!-- Add to Playlist Modal -->
+<div id="playlistModal" class="hidden fixed inset-0 w-full h-full bg-black bg-opacity-50 z-50 flex justify-center items-center">
+    <div class="bg-white rounded-lg p-6 w-96 shadow-lg">
+        <h3 class="text-xl font-bold mb-4">Select a Playlist</h3>
+        <ul id="modalPlaylistList"></ul>
+        <button class="bg-gray-300 p-2 hover:bg-gray-100 text-gray-700 h-10 m-1 rounded" onclick="closePlaylistModal()">[X]</button>
+    </div>
 </div>
 
-<div id="overlay" class="hidden fixed inset-0 w-full h-full bg-black bg-opacity-50 z-50" onclick="closeModal()"></div>
+<!-- Compression Modal -->
+<div id="ffmpegModal" class="hidden fixed inset-0 w-full h-full bg-black bg-opacity-50 z-50 flex justify-center items-center">
+    <div class="bg-white rounded-lg p-6 w-96 shadow-lg">
+        <h3 class="text-xl font-bold mb-4">Compress File</h3>
+        <form id="ffmpegOptionsForm">
+            <label class="block mb-2">
+                <span class="text-gray-700">Bitrate (kbps):</span>
+                <input type="number" id="bitrate" name="bitrate" class="w-full p-2 border rounded" value="128" min="32" max="320" required />
+            </label>
+            <label class="block mb-2">
+                <span class="text-gray-700">Output Format:</span>
+                <select id="outputFormat" name="outputFormat" class="w-full p-2 border rounded">
+                    <option value="mp3">MP3</option>
+                </select>
+            </label>
+            <div class="flex justify-end mt-4">
+                <button type="button" onclick="closeFfmpegModal()" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Compress</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
     /*
@@ -81,8 +106,7 @@ else
      */
     function removeAudio(fileUrl) {
         if (!confirm("Are you sure you want to delete this file?")) return;
-
-        const listItem = document.querySelector(`[data-file="${fileUrl}"]`);
+        
         fetch('/Library/DeleteFile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -93,6 +117,7 @@ else
                 alert(data.message || "File deleted successfully");
                 
                 if (response.ok) {
+                    const listItem = document.querySelector(`[data-file="${fileUrl}"]`);
                     listItem.remove();
                 } 
             })
@@ -110,18 +135,14 @@ else
                 modalPlaylistList.innerHTML = '';
                 data.forEach(playlist => {
                     const li = document.createElement('li');
-                    
                     const button = document.createElement('button');
                     button.textContent = playlist.name;
                     button.className = 'bg-gray-600 text-white px-4 p-2 m-1 rounded hover:bg-gray-400';
                     button.onclick = () => addToPlaylist(playlist.id, songName);
-                    
                     li.appendChild(button);
                     modalPlaylistList.appendChild(li);
                 });
-
-                document.getElementById('playlistModal').style.display = 'block';
-                document.getElementById('overlay').style.display = 'block';
+                document.getElementById('playlistModal').classList.remove('hidden');
             });
     }
 
@@ -134,15 +155,53 @@ else
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(songName),
         }).then(() => {
-            closeModal();
+            closePlaylistModal();
         });
     }
     
     /*
      * Closes "Add to Playlist" Modal
      */
-    function closeModal() {
-        document.getElementById('playlistModal').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
+    function closePlaylistModal() {
+        document.getElementById('playlistModal').classList.add('hidden');
     }
+
+    /*
+     * Closes "Compress" Modal
+     */
+    function closeFfmpegModal() {
+        document.getElementById('ffmpegModal').classList.add('hidden');
+    }
+    
+    /*
+     * Compresses the size of an audio file
+     */
+    function compressFile(fileName) {
+        document.getElementById('ffmpegModal').classList.remove('hidden');
+        document.getElementById('ffmpegModal').dataset.fileName = fileName;
+    }
+    
+    /*
+     * Handles the form submission for audio file compression
+     */
+    document.getElementById('ffmpegOptionsForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const modal = document.getElementById('ffmpegModal');
+        const fileName = modal.dataset.fileName;
+        const bitrate = document.getElementById('bitrate').value;
+        const outputFormat = document.getElementById('outputFormat').value; // Currently only mp3
+
+        fetch('/Library/Compress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName, bitrate, outputFormat })
+        })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || 'Compression complete!');
+                closeFfmpegModal();
+            })
+            .catch(error => alert('Error compressing file: ' + error));
+    });
 </script>
