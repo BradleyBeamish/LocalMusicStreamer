@@ -1,3 +1,30 @@
+# Local Music Streamer
+In today's day of age, almost everyone is subscribed to multiple subscription based services. They offer a simplified way to access media, for a monthly cost. However, the user will be stuck with lower quality content that they will not own.
+
+This Music Streaming Application was developed to switch away from the big music streaming services. It provides a user interface to listen to your high quality audio files, without any extra costs.
+
+**Benefits:**
+- High Quality Music
+- As the user owns their audio files, they cannot be taken away.
+- Everything is done locally, ensuring the best performance and security.
+***
+# Compression
+One benefit to having your own music files, is the ability to have lossless quality. This is not always available in streaming services.
+- The one downside to having the highest quality audio files, is their filesize.
+- This is why the application allows for Audio Compression.
+- Using FFmpeg, the user can choose to compress a file to a specific bitrate.
+- In the photo below, a 27MB audio file was compressed down to 5MB, both files will sound the same to casual listeners.
+
+![Screenshot From 2025-01-07 11-17-33](https://github.com/user-attachments/assets/87446f51-9e1c-4abf-a01d-c0d78720d3e9)
+***
+# User Interface Overview
+![Screenshot From 2025-01-07 11-16-56](https://github.com/user-attachments/assets/f57db6be-928a-433f-be6d-b27030fb45db)
+![Screenshot From 2025-01-07 11-14-24](https://github.com/user-attachments/assets/6e33a0c7-d4bd-46d7-8bc1-3d56082f07f0)
+![Screenshot From 2025-01-07 11-15-18](https://github.com/user-attachments/assets/f07c8f8f-32cf-4450-afd5-5e8fdea19eb6)
+![Screenshot From 2025-01-07 11-15-56](https://github.com/user-attachments/assets/9b8b1b1d-35fb-4741-9a28-43c9b11bbb43)
+![Screenshot From 2025-01-07 11-16-24](https://github.com/user-attachments/assets/a04c0f05-a5f9-40aa-9a11-7fd9b36d29b4)
+![Screenshot From 2025-01-07 11-16-40](https://github.com/user-attachments/assets/e462f86c-4d19-4b89-a85c-f5d04ac21e89)
+***
 # Running Program on a Raspberry Pi
 By running this application on a Raspberry Pi on an Open Port, it allows any device connected to the same network to access the Music Streamer (including Mobile).
 - The following steps have been made to run on a Raspberry Pi 4B, however could be used on any UNIX based system.
